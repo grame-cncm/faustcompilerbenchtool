@@ -215,7 +215,7 @@ fcbenchgraph.py <file_pattern> <faust_config1> [faust_config2] ... [OPTIONS]
 - `--iterations N`: Number of benchmark iterations (default: 1000)
 - `--extension EXT`: Extension for generated binaries (default: `.bench`)
 - `--no-graph`: Disable graph generation
-- `--graph-output FILE`: Custom graph filename (default: `benchmark_YYYYMMDD_HHMMSS.png`)
+- `--graph-output FILE`: Custom graph filename (default: `YYYYMMDD_HHMMSS_benchmark.png`)
 
 #### Examples
 
@@ -498,19 +498,19 @@ The `--sensitivity-analysis` option performs an additional phase after optimizat
     - ⚪ **LOW** (<5%): Can be fixed to safe defaults
   - Practical recommendations for manual tuning
   - Total improvement achieved through local optimization
-- Human-readable text report: `<dsp_name>_sensitivity_<lang>_<timestamp>.txt`
+- Human-readable text report: `<timestamp>_<dsp_name>_sensitivity_<lang>.txt`
   - Same format as console output
   - Easy to read with any text viewer (`cat`, `less`, etc.)
   - Sensitivity ranking table
   - Parameter importance analysis with categories
   - Recommendations and final configuration
-- JSON file with detailed data: `<dsp_name>_sensitivity_<lang>_<timestamp>.json`
+- JSON file with detailed data: `<timestamp>_<dsp_name>_sensitivity_<lang>.json`
   - Initial and final configurations
   - Complete iteration history
   - Sensitivity rankings at convergence
   - Parameter importance scores and categories
   - For machine processing and further analysis
-- Enhanced bar chart visualization (if matplotlib available): `<dsp_name>_sensitivity_<lang>_<timestamp>.png`
+- Enhanced bar chart visualization (if matplotlib available): `<timestamp>_<dsp_name>_sensitivity_<lang>.png`
   - Color-coded bars by importance category
   - Visual importance indicators
 
@@ -537,12 +537,12 @@ The script automatically generates files with timestamps and always saves result
    - Complete Faust command for best config
 
 3. **JSON results** (always saved automatically):
-   - Default filename: `<dsp_name>_opt_<lang>_<strategy>_<timestamp>.json`
+   - Default filename: `<timestamp>_<dsp_name>_opt_<lang>_<strategy>.json`
    - Can be customized with `--save-results`
    - Contains all tested configurations, benchmark times, and configuration details
 
 4. **Progress graph** (always generated if matplotlib available):
-   - Default filename: `<dsp_name>_opt_<lang>_<strategy>_<timestamp>.png`
+   - Default filename: `<timestamp>_<dsp_name>_opt_<lang>_<strategy>.png`
    - Can be customized with `--graph-output`
    - Shows scatter plot of all trials, running minimum line, and baseline comparison
 

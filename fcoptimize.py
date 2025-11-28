@@ -17,6 +17,8 @@ from pathlib import Path
 from typing import List, Dict, Tuple, Optional, Any
 
 try:
+    import matplotlib
+    matplotlib.use('Agg')  # Force non-interactive backend for headless environments
     import matplotlib.pyplot as plt
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
@@ -661,9 +663,9 @@ the configuration that produces the fastest executable.
 
             # For each option in the option space
             for option_name, option_def in self.option_space.options.items():
-                print(f"Analyzing option: {option_name}")
-
                 current_value = current_config.get(option_name)
+                print(f"Analyzing option: {option_name} (current: {option_name}={current_value} → {current_time:.3f}ms)")
+
                 values = option_def['values']
 
                 # Skip if only one value available
@@ -671,12 +673,25 @@ the configuration that produces the fastest executable.
                     print(f"  → Skipped (only one value available)")
                     continue
 
+                # Remeasure current value to estimate measurement noise
+                config_str = self.option_space.config_to_string(current_config)
+                remeasured_time = self.benchmark_config(
+                    args.dsp_file, config_str, args.iterations, args.timeout
+                )
+
+                if remeasured_time is not None:
+                    noise = ((remeasured_time - current_time) / current_time) * 100
+                    sign = "+" if noise > 0 else ""
+                    print(f"  → {option_name}={current_value}: {remeasured_time:.3f}ms ({sign}{noise:.1f}%) [baseline remeasured]")
+                else:
+                    print(f"  → {option_name}={current_value}: FAILED [baseline remeasured]")
+
                 impacts = []
 
                 # Test each alternative value
                 for test_value in values:
                     if test_value == current_value:
-                        continue  # Skip current value
+                        continue  # Skip current value (already remeasured above)
 
                     # Create modified config
                     modified_config = current_config.copy()
@@ -835,7 +850,7 @@ the configuration that produces the fastest executable.
         print("=" * 70)
 
         # Save sensitivity results to JSON (for machine processing)
-        sensitivity_json_file = f"{dsp_basename}_sensitivity_{args.lang}_{timestamp}.json"
+        sensitivity_json_file = f"{timestamp}_{dsp_basename}_sensitivity_{args.lang}.json"
         sensitivity_data = {
             'timestamp': datetime.now().isoformat(),
             'dsp_file': args.dsp_file,
@@ -855,7 +870,7 @@ the configuration that produces the fastest executable.
         print(f"\nSensitivity results saved to: {sensitivity_json_file}")
 
         # Save sensitivity results to text file (human-readable)
-        sensitivity_txt_file = f"{dsp_basename}_sensitivity_{args.lang}_{timestamp}.txt"
+        sensitivity_txt_file = f"{timestamp}_{dsp_basename}_sensitivity_{args.lang}.txt"
         self.save_sensitivity_report(
             sensitivity_txt_file, args.dsp_file, best_time, current_time,
             iteration, final_sensitivity, importance_data, current_config
@@ -867,7 +882,7 @@ the configuration that produces the fastest executable.
             self.generate_sensitivity_graph(
                 final_sensitivity,
                 importance_data,
-                f"{dsp_basename}_sensitivity_{args.lang}_{timestamp}.png"
+                f"{timestamp}_{dsp_basename}_sensitivity_{args.lang}.png"
             )
 
         # Display final optimized command
@@ -1123,14 +1138,14 @@ the configuration that produces the fastest executable.
         # Automatic save with timestamp
         dsp_basename = Path(args.dsp_file).stem
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        auto_json_file = f"{dsp_basename}_opt_{args.lang}_{args.strategy}_{timestamp}.json"
+        auto_json_file = f"{timestamp}_{dsp_basename}_opt_{args.lang}_{args.strategy}.json"
 
         # Save results (use custom filename if provided, otherwise automatic)
         json_file = args.save_results if args.save_results else auto_json_file
         self.save_results(json_file)
 
         # Automatic graph generation with timestamp
-        auto_graph_file = f"{dsp_basename}_opt_{args.lang}_{args.strategy}_{timestamp}.png"
+        auto_graph_file = f"{timestamp}_{dsp_basename}_opt_{args.lang}_{args.strategy}.png"
 
         # Generate graph (use custom filename if provided, otherwise automatic)
         graph_file = args.graph_output if args.graph_output else auto_graph_file

@@ -303,7 +303,7 @@ and displays a comparative results matrix with graph generation.
         # Automatic filename if not specified
         if graph_output is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            graph_output = f"benchmark_{timestamp}.png"
+            graph_output = f"{timestamp}_benchmark.png"
             
         print(f"\n=== GRAPH GENERATION ===")
         print(f"Output file: {graph_output}")

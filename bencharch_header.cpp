@@ -7,9 +7,11 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
+#include <vector>
 
 #define NBSAMPLES 44100
-#define NBITERATIONS 1000
+#define NBITERATIONS 500
 
 #ifndef FAUSTFLOAT
 #define FAUSTFLOAT float
