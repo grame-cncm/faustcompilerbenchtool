@@ -99,6 +99,8 @@ fcbenchgraph Options:
                        help='Disable graph generation')
     parser.add_argument('--graph-output',
                        help='Custom graph filename')
+    parser.add_argument('--results-output',
+                       help='Custom results markdown filename')
     parser.add_argument('--dry-run', action='store_true',
                        help='Show generated configurations without running benchmark')
 
@@ -216,6 +218,9 @@ def main():
 
     if args.graph_output:
         fcbenchgraph_cmd.extend(['--graph-output', args.graph_output])
+
+    if args.results_output:
+        fcbenchgraph_cmd.extend(['--results-output', args.results_output])
 
     # Execute fcbenchgraph
     print("Executing fcbenchgraph.py...")

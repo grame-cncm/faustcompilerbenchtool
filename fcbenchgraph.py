@@ -55,9 +55,11 @@ and displays a comparative results matrix with graph generation.
                           help='Extension for generated binaries (default: .bench)')
         parser.add_argument('--no-graph', action='store_true',
                           help='Disable graph generation')
-        parser.add_argument('--graph-output', 
-                          help='Graph file name (default: benchmark_YYYYMMDD_HHMMSS.png)')
-        
+        parser.add_argument('--graph-output',
+                          help='Graph file name (default: YYYYMMDD_HHMMSS_benchmark.png)')
+        parser.add_argument('--results-output',
+                          help='Results markdown file name (default: YYYYMMDD_HHMMSS_benchmark_results.md)')
+
         return parser.parse_args()
 
     def find_files(self, pattern: str) -> List[str]:
@@ -220,7 +222,10 @@ and displays a comparative results matrix with graph generation.
                 
         # Display results
         self.display_results(args.faust_configs, len(files), total_benchmarks, successful_benchmarks)
-        
+
+        # Save results to Markdown file
+        self.save_results_markdown(args.faust_configs, args.results_output, args)
+
         # Graph generation
         if not args.no_graph:
             self.generate_graph(args.faust_configs, args.graph_output, args)
@@ -288,6 +293,154 @@ and displays a comparative results matrix with graph generation.
             success_rate = (successful_benchmarks * 100) // total_benchmarks
             print(f"Global success rate: {success_rate}%")
         print("=========================================")
+
+    def save_results_markdown(self, faust_configs: List[str],
+                             output_file: Optional[str] = None,
+                             original_args = None):
+        """Save benchmark results to a Markdown file with best results highlighted."""
+
+        # Generate filename with timestamp if not provided
+        if output_file is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_file = f"{timestamp}_benchmark_results.md"
+
+        # Calculate total stats
+        total_files = len(self.file_list)
+        total_configs = len(faust_configs)
+        total_benchmarks = total_files * total_configs
+        successful_benchmarks = sum(
+            1 for filename in self.file_list
+            for config_idx in range(total_configs)
+            if self.results[filename].get(config_idx, {}).get('status') == 'SUCCESS'
+        )
+
+        with open(output_file, 'w') as f:
+            # Header
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"# Benchmark Results - {current_time}\n\n")
+
+            # Configuration section
+            f.write("## Configuration\n\n")
+            if original_args:
+                f.write(f"- **File pattern**: `{original_args.file_pattern}`\n")
+                f.write(f"- **Iterations**: {original_args.iterations}\n")
+                f.write(f"- **Binary extension**: `{original_args.extension}`\n")
+            f.write(f"- **Date**: {current_time}\n")
+            f.write(f"- **Total files benchmarked**: {total_files}\n")
+            f.write(f"- **Configurations tested**: {total_configs}\n\n")
+
+            # Tested configurations
+            f.write("## Tested Configurations\n\n")
+            for i, config in enumerate(faust_configs, 1):
+                f.write(f"{i}. `{config}`\n")
+            f.write("\n")
+
+            # Results matrix
+            f.write("## Results Matrix (times in ms)\n\n")
+
+            # Table header
+            header = "| File |"
+            separator = "|------|"
+            for i in range(1, total_configs + 1):
+                header += f" Config{i} |"
+                separator += "---------|"
+            f.write(header + "\n")
+            f.write(separator + "\n")
+
+            # Table rows - one per file
+            for filename in self.file_list:
+                # Find best time for this file
+                best_time = None
+                best_config_idx = None
+
+                for config_idx in range(total_configs):
+                    result = self.results[filename].get(config_idx, {})
+                    if result.get('status') == 'SUCCESS' and result.get('time') is not None:
+                        if best_time is None or result['time'] < best_time:
+                            best_time = result['time']
+                            best_config_idx = config_idx
+
+                # Write row
+                row = f"| {filename} |"
+                for config_idx in range(total_configs):
+                    result = self.results[filename].get(config_idx, {'status': 'MISSING', 'time': None})
+
+                    if result['status'] == 'SUCCESS' and result['time'] is not None:
+                        # Bold if this is the best result for this file
+                        if config_idx == best_config_idx:
+                            row += f" **{result['time']:.3f}** |"
+                        else:
+                            row += f" {result['time']:.3f} |"
+                    else:
+                        row += f" {result['status']} |"
+
+                f.write(row + "\n")
+
+            f.write("\n")
+
+            # Statistics per configuration
+            f.write("## Statistics per Configuration\n\n")
+            for i, config in enumerate(faust_configs):
+                stats = self.config_stats[i]
+                f.write(f"### Config{i+1}: `{config}`\n\n")
+                f.write(f"- Successful benchmarks: {stats['count']}/{total_files}\n")
+                if stats['count'] > 0:
+                    avg = stats['total'] / stats['count']
+                    f.write(f"- Total time: {stats['total']:.3f}ms\n")
+                    f.write(f"- Average time: {avg:.3f}ms\n")
+                else:
+                    f.write(f"- No successful benchmarks\n")
+                f.write("\n")
+
+            # Global statistics
+            f.write("## Global Statistics\n\n")
+            f.write(f"- Total files: {total_files}\n")
+            f.write(f"- Total configurations: {total_configs}\n")
+            f.write(f"- Total benchmarks attempted: {total_benchmarks}\n")
+            f.write(f"- Successful benchmarks: {successful_benchmarks}\n")
+            if total_benchmarks > 0:
+                success_rate = (successful_benchmarks * 100) // total_benchmarks
+                f.write(f"- Global success rate: {success_rate}%\n")
+            f.write("\n")
+
+            # Best performers
+            f.write("## Best Performers\n\n")
+            f.write("### Fastest per file\n\n")
+            for filename in self.file_list:
+                best_time = None
+                best_config_idx = None
+
+                for config_idx in range(total_configs):
+                    result = self.results[filename].get(config_idx, {})
+                    if result.get('status') == 'SUCCESS' and result.get('time') is not None:
+                        if best_time is None or result['time'] < best_time:
+                            best_time = result['time']
+                            best_config_idx = config_idx
+
+                if best_config_idx is not None:
+                    f.write(f"- **{filename}**: Config{best_config_idx+1} ({best_time:.3f}ms)\n")
+                else:
+                    f.write(f"- **{filename}**: No successful benchmark\n")
+
+            f.write("\n### Fastest configuration overall\n\n")
+            # Find config with best average
+            best_avg = None
+            best_config_idx = None
+            for i in range(total_configs):
+                stats = self.config_stats[i]
+                if stats['count'] > 0:
+                    avg = stats['total'] / stats['count']
+                    if best_avg is None or avg < best_avg:
+                        best_avg = avg
+                        best_config_idx = i
+
+            if best_config_idx is not None:
+                stats = self.config_stats[best_config_idx]
+                f.write(f"- **Config{best_config_idx+1}** (`{faust_configs[best_config_idx]}`)\n")
+                f.write(f"  - Average: {best_avg:.3f}ms across {stats['count']} successful benchmarks\n")
+
+        print(f"\n=== RESULTS SAVED ===")
+        print(f"Markdown results: {output_file}")
 
     def generate_graph(self, faust_configs: List[str], graph_output: Optional[str] = None, 
                       original_args: Optional[argparse.Namespace] = None):
