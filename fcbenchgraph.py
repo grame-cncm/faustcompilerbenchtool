@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 try:
+    import matplotlib
+    matplotlib.use('Agg')  # Use non-interactive backend for saving to file
     import matplotlib.pyplot as plt
     MATPLOTLIB_AVAILABLE = True
 except ImportError:

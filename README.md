@@ -33,11 +33,13 @@ Assuming you have compiled `foo.dsp` into `foo.cpp`, the following tools are ava
 
 7. **`fcexplorer.py`**: A Python script to explore various Faust compilation options and their impact on the generated C++ code.
 
-8. **`fcbenchgraph.py`**: A Python script to benchmark multiple DSP files with different FAUST configurations and generate comparative performance graphs.
+8. **`fcexplore-bench.py`**: A frontend for `fcbenchgraph.py` that automatically generates all combinations of Faust compiler options and benchmarks them.
 
-9. **`fcanalyze.py`**: A Python script to analyze multiple DSP files with different FAUST configurations using static analysis to detect warnings and errors.
+9. **`fcbenchgraph.py`**: A Python script to benchmark multiple DSP files with different FAUST configurations and generate comparative performance graphs.
 
-10. **`fcoptimize.py`**: An automatic optimization tool that searches for the best Faust scalar compilation options for a given DSP file.
+10. **`fcanalyze.py`**: A Python script to analyze multiple DSP files with different FAUST configurations using static analysis to detect warnings and errors.
+
+11. **`fcoptimize.py`**: An automatic optimization tool that searches for the best Faust scalar compilation options for a given DSP file.
 
 
 ---
@@ -184,6 +186,100 @@ will generate the 8 corresponding C++ files. The generated files will be named `
 Common recipes:
 - Delay tuning sweep: `fcexplorer.py -mcd "0 4 8 12" -mdd "512 1024 2048" myalgo.dsp`
 - Vector vs scalar: `fcexplorer.py -vec "" myalgo.dsp` then benchmark the produced files with `fcbenchtool`.
+
+
+### `fcexplore-bench.py`
+
+**fcexplore-bench.py** is a frontend for `fcbenchgraph.py` that automatically generates all combinations of Faust compiler options and benchmarks them. Instead of manually specifying each configuration, you provide options with multiple values and it generates the cartesian product.
+
+#### Features
+
+- Automatic generation of configuration combinations from option values
+- Distinguishes between base options (always present) and variable options (to explore)
+- Passes all configurations to `fcbenchgraph.py` for benchmarking
+- Supports all `fcbenchgraph.py` options (iterations, graph output, etc.)
+- Dry-run mode to preview generated configurations
+
+#### Usage
+
+```bash
+fcexplore-bench.py <file_pattern> [FAUST_OPTIONS] [OPTIONS]
+# after install you can also call: fcexplore-bench <pattern> ...
+```
+
+#### Parameters
+
+- **file_pattern**: Glob pattern for `.dsp` files to benchmark (e.g., `"*.dsp"`)
+- **FAUST_OPTIONS**: Faust compiler options with values to explore
+
+#### Faust Option Syntax
+
+- `-option "val1 val2 val3"`: Test option with multiple values (generates N+1 configs: without option + with each value)
+- `-option "value"`: Single value, treated as base option (always present)
+- `-option ""`: Flag option that can be present or absent
+
+#### Options
+
+- `--iterations N`: Number of benchmark iterations (default: 1000)
+- `--extension EXT`: Extension for generated binaries (default: `.bench`)
+- `--no-graph`: Disable graph generation
+- `--graph-output FILE`: Custom graph filename
+- `--dry-run`: Show generated configurations without running benchmark
+
+#### Examples
+
+1. **Test different -mcd values**:
+
+   ```bash
+   fcexplore-bench.py "*.dsp" -lang cpp -mcd "0 2 4 8"
+   ```
+
+   Generates 5 configurations:
+   - `-lang cpp` (without -mcd)
+   - `-lang cpp -mcd 0`
+   - `-lang cpp -mcd 2`
+   - `-lang cpp -mcd 4`
+   - `-lang cpp -mcd 8`
+
+2. **Explore delay options for ocpp**:
+
+   ```bash
+   fcexplore-bench.py "reverb.dsp" -lang ocpp -mcd "0 4 8" -mdd "512 1024"
+   ```
+
+   Generates 9 configurations (3 × 3): all combinations of -mcd and -mdd values
+
+3. **Preview configurations without benchmarking**:
+
+   ```bash
+   fcexplore-bench.py "*.dsp" -lang cpp -mcd "0 4" -mdd "512 1024" --dry-run
+   ```
+
+4. **With custom iterations and graph output**:
+
+   ```bash
+   fcexplore-bench.py "*.dsp" -lang cpp -mcd "0 4 8" --iterations 500 --graph-output my_exploration.png
+   ```
+
+#### How It Works
+
+1. Parses Faust options and separates base options (single value) from variable options (multiple values)
+2. Generates all combinations of variable options using cartesian product
+3. Builds complete configuration strings with base options + each combination
+4. Calls `fcbenchgraph.py` with all generated configurations and specified options
+
+#### Comparison with Other Tools
+
+- **fcexplorer.py**: Only generates C++ files, no benchmarking
+- **fcbenchgraph.py**: Requires manually specifying each complete configuration
+- **fcexplore-bench.py**: Automatically generates configurations and benchmarks them
+
+#### Prerequisites
+
+- FAUST compiler must be installed and accessible
+- `fcbenchtool` and `fcbenchgraph.py` must be installed (from this toolkit)
+- Python 3 with standard libraries
+- matplotlib (optional, for graph generation): `pip install matplotlib`
 
 
 ### `fcbenchgraph.py`
