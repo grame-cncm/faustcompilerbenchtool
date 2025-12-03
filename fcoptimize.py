@@ -238,7 +238,7 @@ the configuration that produces the fastest executable.
         parser.add_argument('--strategy', choices=['random', 'adaptive'],
                           default='random',
                           help='Search strategy (default: random)')
-        parser.add_argument('--max-trials', type=int, default=100,
+        parser.add_argument('--max-trials', type=int, default=1000,
                           help='Maximum number of configurations to try (default: 100)')
         parser.add_argument('--iterations', type=int, default=1000,
                           help='Benchmark iterations per configuration (default: 1000)')
@@ -634,8 +634,8 @@ the configuration that produces the fastest executable.
         If a better configuration is found, the analysis iterates until convergence
         to a local optimum.
         """
-        # Significance threshold: only improvements > 0.5% are considered significant
-        MIN_IMPROVEMENT_THRESHOLD = 0.005  # 0.5%
+        # Significance threshold: only improvements > 0.1% are considered significant
+        MIN_IMPROVEMENT_THRESHOLD = 0.001  # 0.1%
 
         print("\n" + "=" * 70)
         print("=== SENSITIVITY ANALYSIS WITH LOCAL OPTIMIZATION ===")
